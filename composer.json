@@ -1,35 +1,35 @@
 {
-    "name": "alifcoder/permissions",
-    "description": "A simple role and permission management package for Laravel.",
-    "type": "library",
-    "require": {
-        "php": ">=8.2",
-        "illuminate/support": "^11.0 || ^12.0"
-    },
-    "license": "MIT",
-    "autoload": {
-        "files": [
-            "src/Helpers/*.php"
-        ],
-        "psr-4": {
-            "Alif\\Permissions\\": "src/"
-        }
-    },
-    "extra": {
-        "laravel": {
-            "providers": [
-                "Alif\\Permissions\\PermissionServiceProvider"
-            ],
-        }
-    },
-    "authors": [
-        {
-            "name": "Shukhratjon Yuldashev",
-            "email": "uzalifcoder@gmail.com"
-        }
+  "name": "alifcoder/permissions",
+  "description": "A simple role and permission management package for Laravel.",
+  "type": "library",
+  "require": {
+    "php": ">=8.2",
+    "illuminate/support": "^11.0 || ^12.0"
+  },
+  "license": "MIT",
+  "autoload": {
+    "files": [
+      "src/Helpers/*.php"
     ],
-    "minimum-stability": "stable",
-    "require-dev": {
-        "laravel/framework": "^v12.14.1"
+    "psr-4": {
+      "Alif\\Permissions\\": "src/"
     }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Alif\\Permissions\\PermissionServiceProvider"
+      ]
+    }
+  },
+  "authors": [
+    {
+      "name": "Shukhratjon Yuldashev",
+      "email": "uzalifcoder@gmail.com"
+    }
+  ],
+  "minimum-stability": "stable",
+  "require-dev": {
+    "laravel/framework": "^v12.14.1"
+  }
 }
