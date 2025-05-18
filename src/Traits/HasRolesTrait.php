@@ -8,6 +8,7 @@
 namespace Alif\Permissions\Traits;
 
 use Alif\Permissions\Models\Role;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Collection;
@@ -158,7 +159,9 @@ trait HasRolesTrait
         if (checkToUUID($value) || is_int($value)) {
             return $this->roles()->where('id', $value)->exists();
         } elseif (is_string($value)) {
-            return $this->roles()->where('name', $value)->orWhere('s_code', $value)->exists();
+            return $this->roles()->where(function (Builder $builder) use ($value) {
+                $builder->where('name', $value)->orWhere('s_code', $value);
+            })->exists();
         } elseif ($value instanceof Role) {
             return $this->roles()->where('id', $value->id)->exists();
         } elseif ($value instanceof Collection || is_array($value)) {
@@ -217,7 +220,9 @@ trait HasRolesTrait
         if (checkToUUID($value) || is_int($value)) {
             return $this->roles()->where('id', $value)->exists();
         } elseif (is_string($value)) {
-            return $this->roles()->where('name', $value)->orWhere('s_code', $value)->exists();
+            return $this->roles()->where(function (Builder $builder) use ($value) {
+                $builder->where('name', $value)->orWhere('s_code', $value);
+            })->exists();
         } elseif ($value instanceof Role) {
             return $this->roles()->where('id', $value->id)->exists();
         } elseif ($value instanceof Collection || is_array($value)) {
@@ -247,12 +252,13 @@ trait HasRolesTrait
      * Check if user has all of the given permissions
      * You can give to parameter:
      *  - array -> Array of permission names
+     *  - string -> Permission name
      *
-     * @param array $permissionNames
+     * @param array|string $permissionNames
      *
      * @return bool
      */
-    public function hasAllPermissions(array $permissionNames): bool
+    public function hasAllPermissions(array|string $permissionNames): bool
     {
         if (permissionCacheable()) {
             return \Cache::tags(['user_role:' . $this->id, 'alif_permission'])
@@ -266,8 +272,9 @@ trait HasRolesTrait
         }
     }
 
-    private function hasAllPermissionsFunc(array $permissionNames): bool
+    private function hasAllPermissionsFunc(array|string $permissionNames): bool
     {
+        $permissionNames = \Arr::wrap($permissionNames);
         if (count($permissionNames) === 0) {
             return false;
         }
@@ -286,7 +293,7 @@ trait HasRolesTrait
      *
      * @return bool
      */
-    public function hasAnyPermission(array $permissionNames): bool
+    public function hasAnyPermission(array|string $permissionNames): bool
     {
         if (permissionCacheable()) {
             return \Cache::tags(['user_role:' . $this->id, 'alif_permission'])
@@ -300,8 +307,9 @@ trait HasRolesTrait
         }
     }
 
-    private function hasAnyPermissionFunc(array $permissionNames): bool
+    private function hasAnyPermissionFunc(array|string $permissionNames): bool
     {
+        $permissionNames = \Arr::wrap($permissionNames);
         if (count($permissionNames) === 0) {
             return false;
         }
