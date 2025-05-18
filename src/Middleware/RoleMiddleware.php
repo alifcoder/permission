@@ -16,7 +16,7 @@ class RoleMiddleware
     /**
      * @throws PermissionException
      */
-    public function handle(Request $request, Closure $next, array|string $roles, ?string $guard = null)
+    public function handle(Request $request, Closure $next, string $roles, ?string $guard = null)
     {
         // auth guard
         $authGuard = app('auth')->guard($guard);
@@ -32,9 +32,7 @@ class RoleMiddleware
         }
 
         // prepare roles for checking
-        $roles = is_array($roles)
-                ? $roles
-                : explode('|', $roles);
+        $roles = explode('|', $roles);
 
         // check user has all roles then allow
         if ($authGuard->user()->hasAllRoles($roles) === true) {

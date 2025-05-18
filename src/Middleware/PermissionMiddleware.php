@@ -16,7 +16,7 @@ class PermissionMiddleware
     /**
      * @throws PermissionException
      */
-    public function handle(Request $request, Closure $next, array|string $permissions, ?string $guard = null)
+    public function handle(Request $request, Closure $next, string $permissions, ?string $guard = null)
     {
         // auth guard
         $authGuard = app('auth')->guard($guard);
@@ -32,9 +32,7 @@ class PermissionMiddleware
         }
 
         // prepare permissions for checking
-        $permissions = is_array($permissions)
-            ? $permissions
-            : explode('|', $permissions);
+        $permissions = explode('|', $permissions);
 
         // check user has all permissions then allow
         if ($authGuard->user()->hasAllPermissions($permissions) === true) {

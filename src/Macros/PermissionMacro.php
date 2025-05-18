@@ -13,7 +13,7 @@ class PermissionMacro
 {
     public static function register(): void
     {
-        Route::macro('role', function ($roles = []) {
+        Route::macro('role', function (array|string $roles = []) {
             $roles = implode('|', \Arr::wrap($roles));
 
             $this->middleware("role:$roles");
@@ -21,7 +21,7 @@ class PermissionMacro
             return $this;
         });
 
-        Route::macro('permission', function (array $permissions = []) {
+        Route::macro('permission', function (array|string $permissions = []) {
             $permissions = implode('|', \Arr::wrap($permissions));
 
             $this->middleware("permission:$permissions");
