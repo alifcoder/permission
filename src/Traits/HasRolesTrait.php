@@ -17,11 +17,15 @@ trait HasRolesTrait
     protected static function bootHasRolesTrait(): void
     {
         // clear cache when user is deleted and updated
-        static::deleted(function (self $_model) {
-            \Cache::tags(['user_role:' . $this->id, 'alif_permission'])->flush();
+        static::deleted(function (self $model) {
+            if (permissionCacheable() === true) {
+                \Cache::tags(['user_role:' . $model->id, 'alif_permission'])->flush();
+            }
         });
-        static::updated(function (self $_model) {
-            \Cache::tags(['user_role:' . $this->id, 'alif_permission'])->flush();
+        static::updated(function (self $model) {
+            if (permissionCacheable() === true) {
+                \Cache::tags(['user_role:' . $model->id, 'alif_permission'])->flush();
+            }
         });
     }
 
@@ -53,7 +57,7 @@ trait HasRolesTrait
         // get unique permissions from all roles
         if (permissionCacheable()) {
             return \Cache::tags(['user_role:' . $this->id, 'alif_permission'])->rememberForever('permissions_' .
-                                                                                              $this->id,
+                                                                                                $this->id,
                     function () {
                         return $this->roles()
                                 ->with('permissions')
