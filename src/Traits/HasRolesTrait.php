@@ -308,29 +308,6 @@ trait HasRolesTrait
     }
 
     /**
-     * Check if user has the given permission
-     * You can give to parameter:
-     *  - string -> Permission name
-     *
-     * @param string $permission
-     *
-     * @return bool
-     */
-    public function can(string $permission): bool
-    {
-        if (permissionCacheable()) {
-            return \Cache::tags(['user_role:' . $this->id, 'alif_permission'])
-                    ->rememberForever('can_' . $this->id . ':' . $this->safe_md5($permission),
-                            function () use ($permission) {
-                                return $this->getPermissionsAttribute()->where('name', $permission)->count() > 0;
-                            }
-                    );
-        } else {
-            return $this->getPermissionsAttribute()->where('name', $permission)->count() > 0;
-        }
-    }
-
-    /**
      * Remove roles from user
      * You can give to parameter:
      *  - Collection -> Collection of Role or id or s_code or name
