@@ -9,7 +9,7 @@
   "license": "MIT",
   "autoload": {
     "files": [
-      "src/Helpers/*.php"
+      "src/Helpers/Helper.php"
     ],
     "psr-4": {
       "Alif\\Permissions\\": "src/"
