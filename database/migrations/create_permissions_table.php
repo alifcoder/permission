@@ -23,13 +23,13 @@ return new class extends Migration {
     {
         // create permissions table
         Schema::create('permissions', function (Blueprint $table) {
-            $table->bigIncrements('id');
+            $table->uuid('id')->primary();
             $table->string('name')->unique();
         });
 
         // create roles table
         Schema::create('roles', function (Blueprint $table) {
-            $table->bigIncrements('id');
+            $table->uuid('id')->primary();
             $table->string('name')->nullable()->index();
             $table->string('s_code')->nullable()->index();
 
@@ -43,15 +43,15 @@ return new class extends Migration {
 
         // create role_permission table
         Schema::create('role_permission', function (Blueprint $table) {
-            $table->foreignId('role_id')->constrained('roles');
-            $table->foreignId('permission_id')->constrained('permissions');
+            $table->foreignUuid('role_id')->constrained('roles');
+            $table->foreignUuid('permission_id')->constrained('permissions');
             $table->primary(['role_id', 'permission_id']);
         });
 
         // create user_role table
         Schema::create('user_role', function (Blueprint $table) {
-            $table->foreignId('user_id')->constrained('users');
-            $table->foreignId('role_id')->constrained('roles');
+            $table->foreignUuid('user_id')->constrained('users');
+            $table->foreignUuid('role_id')->constrained('roles');
             $table->primary(['user_id', 'role_id']);
         });
     }
