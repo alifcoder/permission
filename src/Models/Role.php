@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Ramsey\Uuid\Uuid;
 
 class Role extends Model
 {
@@ -30,6 +31,12 @@ class Role extends Model
     {
         parent::boot();
 
+        static::creating(function (self $model) {
+            if (empty($model->{$model->getKeyName()}) && config('permissions.is_model_uuid', true) === true) {
+                $model->{$model->getKeyName()} = Uuid::uuid4()->toString();
+            }
+        });
+
         // clear cache when user is deleted and updated
         static::deleted(function (self $model) {
             if (permissionCacheable() === true) {
@@ -45,6 +52,26 @@ class Role extends Model
                 }
             }
         });
+    }
+
+    /**
+     * Get the value indicating whether the IDs are incrementing.
+     *
+     * @return bool
+     */
+    public function getIncrementing(): bool
+    {
+        return config('permissions.is_model_uuid', true) === false;
+    }
+
+    /**
+     * Get the auto-incrementing key type.
+     *
+     * @return string
+     */
+    public function getKeyType(): string
+    {
+        return config('permissions.is_model_uuid', true) === false ? 'int' : 'string';
     }
 
     public function name(): Attribute

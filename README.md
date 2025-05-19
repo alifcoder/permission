@@ -1,6 +1,6 @@
 # 🔐 Alif Permissions
 
-A simple, flexible role and permission management system for Laravel applications — designed to support 
+A simple, flexible role and permission management system for Laravel applications — designed to support
 `Gate::before`, `SUPER ADMIN` logic, modular apps (`nwidart/laravel-modules`), and dynamic user model resolution.
 
 ---
@@ -38,10 +38,10 @@ php artisan migrate
 ```
 
 This will publish:
+
 - `lang/vendor/permissions`
 - `config/permission.php`
 - `database/migrations/xxxx_xx_xx_xxxxxx_create_permissions_table.php`
-
 
 ---
 
@@ -57,6 +57,8 @@ return [
     ],
     
     'cacheable' => true,
+    
+    'is_model_uuid' => true,
         
 ];
 ```
@@ -160,6 +162,7 @@ resources/
 database/
 └── migrations/
 ```
+
 ---
 
 ## 🧹 Clear permission caches

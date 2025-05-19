@@ -39,4 +39,12 @@ return [
          */
         'cacheable' => true,
 
+        /**
+         * Mark the models as UUID.
+         * This is used to set the UUID for the models.
+         *
+         * ATTENTION! If you use the bigint as a primary key, you need to set this to false.
+         */
+        'is_model_uuid' => true,
+
 ];
