@@ -45,6 +45,19 @@ class UninstallPermissionCommand extends Command
             $this->info("⚠️ Deleted migration: {$migrationPath}");
         }
 
+        // Delete language files
+        $langPath = resource_path('lang/vendor/permissions');
+        if (is_dir($langPath)) {
+            // delete all query.php files in the directory
+            $files = glob($langPath . '/*/permissions.php');
+            foreach ($files as $file) {
+                unlink($file);
+                $this->info('⚠️ Removed ' . $file);
+            }
+            // delete the directory
+            rmdir($langPath);
+        }
+
         $this->info('✅  Permission package uninstalled successfully.');
     }
 
