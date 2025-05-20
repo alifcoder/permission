@@ -179,7 +179,7 @@ trait HasRolesTrait
                 }
             }
 
-            return $this->roles()->whereIn('id', $ids)->count() === count($ids);
+            return $this->roles()->whereIn('id', $ids)->count() === count($value);
         } elseif ($value instanceof EloquentCollection) {
             return $this->roles()->whereIn('id', $value->pluck('id'))->count() === $value->count();
         }
