@@ -20,7 +20,7 @@ A simple, flexible role and permission management system for Laravel application
 ## 📦 Requirements
 
 - PHP `>=8.2`
-- Laravel `^11.0 || ^12.0`
+- Laravel `^11.0 || ^12.0 || ^13.0`
 
 ---
 
