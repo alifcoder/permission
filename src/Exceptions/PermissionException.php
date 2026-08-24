@@ -8,6 +8,7 @@
 namespace Alif\Permissions\Exceptions;
 
 use Exception;
+use Illuminate\Http\JsonResponse;
 
 class PermissionException extends Exception
 {
@@ -24,5 +25,12 @@ class PermissionException extends Exception
     public static function notLoggedIn(): self
     {
         return new static(message: __('permissions::permissions.not_logged_in'), code: 401);
+    }
+
+    public function render(): JsonResponse
+    {
+        return response()->json([
+                                        'message' => $this->getMessage(),
+                                ], $this->getCode());
     }
 }
