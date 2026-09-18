@@ -2,17 +2,26 @@
   "name": "alifcoder/permissions",
   "description": "A simple role and permission management package for Laravel.",
   "type": "library",
+  "license": "MIT",
   "require": {
     "php": ">=8.2",
     "illuminate/support": "^11.0 || ^12.0 || ^13.0"
   },
-  "license": "MIT",
+  "require-dev": {
+    "laravel/framework": "^v12.14.1",
+    "orchestra/testbench": "^10.0"
+  },
   "autoload": {
     "files": [
       "src/Helpers/Helper.php"
     ],
     "psr-4": {
       "Alif\\Permissions\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Alif\\Permissions\\Tests\\": "tests/"
     }
   },
   "extra": {
@@ -28,8 +37,12 @@
       "email": "uzalifcoder@gmail.com"
     }
   ],
+  "config": {
+    "sort-packages": true
+  },
+  "scripts": {
+    "test": "vendor/bin/phpunit"
+  },
   "minimum-stability": "stable",
-  "require-dev": {
-    "laravel/framework": "^v12.14.1"
-  }
+  "prefer-stable": true
 }
