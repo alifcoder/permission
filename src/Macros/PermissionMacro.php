@@ -8,25 +8,24 @@
 namespace Alif\Permissions\Macros;
 
 use Illuminate\Routing\Route;
+use Illuminate\Support\Arr;
 
 class PermissionMacro
 {
     public static function register(): void
     {
-        Route::macro('role', function (array|string $roles = []) {
-            $roles = implode('|', \Arr::wrap($roles));
+        if (Route::hasMacro('role') === false) {
+            Route::macro('role', function (array|string $roles = []) {
+                /** @var Route $this */
+                return $this->middleware('role:' . implode('|', Arr::wrap($roles)));
+            });
+        }
 
-            $this->middleware("role:$roles");
-
-            return $this;
-        });
-
-        Route::macro('permission', function (array|string $permissions = []) {
-            $permissions = implode('|', \Arr::wrap($permissions));
-
-            $this->middleware("permission:$permissions");
-
-            return $this;
-        });
+        if (Route::hasMacro('permission') === false) {
+            Route::macro('permission', function (array|string $permissions = []) {
+                /** @var Route $this */
+                return $this->middleware('permission:' . implode('|', Arr::wrap($permissions)));
+            });
+        }
     }
 }

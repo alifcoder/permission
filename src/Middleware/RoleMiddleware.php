@@ -2,7 +2,7 @@
 /**
  * Created by Shukhratjon Yuldashev on 2025-05-16
  * Contact: https://t.me/alif_coder
- * Time: 4:32 PM
+ * Time: 4:32 PM
  */
 
 namespace Alif\Permissions\Middleware;
@@ -10,32 +10,36 @@ namespace Alif\Permissions\Middleware;
 use Alif\Permissions\Exceptions\PermissionException;
 use Closure;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class RoleMiddleware
 {
     /**
      * @throws PermissionException
      */
-    public function handle(Request $request, Closure $next, string $roles, ?string $guard = null)
+    public function handle(Request $request, Closure $next, string $roles, ?string $guard = null): Response
     {
-        // auth guard
-        $authGuard = app('auth')->guard($guard);
+        $user = app('auth')->guard($guard)->user();
 
         // check user is guest then throw exception
-        if ($authGuard->guest()) {
+        if ($user === null) {
             throw PermissionException::notLoggedIn();
         }
 
+        if (method_exists($user, 'hasAllRoles') === false) {
+            throw PermissionException::roles();
+        }
+
         // check user is super admin then allow all roles
-        if ($authGuard->user()->isSuperAdmin()) {
+        if ($user->isSuperAdmin()) {
             return $next($request);
         }
 
         // prepare roles for checking
-        $roles = explode('|', $roles);
+        $roles = array_filter(explode('|', $roles), static fn(string $role) => trim($role) !== '');
 
         // check user has all roles then allow
-        if ($authGuard->user()->hasAllRoles($roles) === true) {
+        if ($roles !== [] && $user->hasAllRoles($roles) === true) {
             return $next($request);
         }
 

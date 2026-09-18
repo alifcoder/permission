@@ -7,42 +7,36 @@
 
 namespace Alif\Permissions\Models;
 
+use Alif\Permissions\Models\Concerns\HasUuidPrimaryKey;
+use Alif\Permissions\Models\Concerns\ResolvesKeys;
+use Alif\Permissions\Support\PermissionCache;
 use Illuminate\Database\Eloquent\Model;
-use Ramsey\Uuid\Uuid;
 
 class Permission extends Model
 {
+    use HasUuidPrimaryKey;
+    use ResolvesKeys;
+
     public    $timestamps = false;
     protected $guarded    = false;
 
-    protected static function boot(): void
+    protected static function booted(): void
     {
-        parent::boot();
+        // Permission names are cached inside the role set of every user,
+        // so renaming or deleting one invalidates the whole package cache.
+        $flush = static fn() => PermissionCache::flush();
 
-        static::creating(function (self $model) {
-            if (empty($model->{$model->getKeyName()}) && config('permissions.is_model_uuid', true) === true) {
-                $model->{$model->getKeyName()} = Uuid::uuid4()->toString();
-            }
-        });
+        static::updated($flush);
+        static::deleted($flush);
     }
 
     /**
-     * Get the value indicating whether the IDs are incrementing.
+     * Columns used to look up a permission by a human readable value.
      *
-     * @return bool
+     * @return array<string, bool>
      */
-    public function getIncrementing(): bool
+    protected static function searchableColumns(): array
     {
-        return config('permissions.is_model_uuid', true) === false;
-    }
-
-    /**
-     * Get the auto-incrementing key type.
-     *
-     * @return string
-     */
-    public function getKeyType(): string
-    {
-        return config('permissions.is_model_uuid', true) === false ? 'int' : 'string';
+        return ['name' => false];
     }
 }

@@ -7,6 +7,7 @@
 
 namespace Alif\Permissions\Console;
 
+use Alif\Permissions\Support\PermissionCache;
 use Illuminate\Console\Command;
 
 class ClearPermissionCacheCommand extends Command
@@ -15,19 +16,18 @@ class ClearPermissionCacheCommand extends Command
 
     protected $description = 'Clear the permission caches';
 
-    public function handle(): void
+    public function handle(): int
     {
-        $allow = [
-                'redis',
-                'memcached',
-        ];
+        if (PermissionCache::enabled() === false) {
+            $this->warn('⚠️  Permission cache is disabled or the cache store does not support tags.');
 
-        if (in_array(config('cache.default'), $allow) === true) {
-            // clear cache by tags
-            \Cache::tags(['alif_permission'])->flush();
-            $this->info('✅  Permission caches are cleared successfully.');
-        } else {
-            $this->info('⚠️  Cache driver is not supported.');
+            return self::SUCCESS;
         }
+
+        PermissionCache::flush();
+
+        $this->info('✅  Permission caches are cleared successfully.');
+
+        return self::SUCCESS;
     }
 }

@@ -8,7 +8,7 @@
 
 return [
 
-        'models'    => [
+        'models'        => [
             /**
              * When using the "HasRolesTrait" trait from this package, we need to know which
              * Eloquent model should be used to retrieve your roles. Of course, it
@@ -32,12 +32,24 @@ return [
 
 
         /**
-         * The cache key for the user roles.
-         * You can use the `cacheable` method in your User model to set the cache key.
+         * Cache the roles and permissions of every user.
          *
-         * ATTENTION! When you use ['redis', 'memcached'] cache drivers.
+         * ATTENTION! The cache store must support tags (redis, memcached, array).
+         * When the store is not taggable, the package silently works without cache.
          */
-        'cacheable' => true,
+        'cacheable'     => true,
+
+        /**
+         * The cache store used by the package. Null means the default store.
+         * Set it when your default store does not support tags.
+         */
+        'cache_store'   => null,
+
+        /**
+         * Lifetime (in seconds) of a cached entry. Null means forever.
+         * The cache is invalidated automatically on every role/permission change.
+         */
+        'cache_ttl'     => null,
 
         /**
          * Mark the models as UUID.

@@ -7,58 +7,84 @@
 
 namespace Alif\Permissions\Console;
 
+use Alif\Permissions\Support\PermissionCache;
 use Illuminate\Console\Command;
+use Illuminate\Console\ConfirmableTrait;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 
 class UninstallPermissionCommand extends Command
 {
-    protected $signature = 'permission:uninstall';
+    use ConfirmableTrait;
+
+    protected $signature = 'permission:uninstall {--force : Force the operation to run when in production}';
 
     protected $description = 'Remove config, migrations, and data related to Permission package';
 
-    public function handle(): void
+    public function handle(): int
     {
-        // Delete published config
-        $configPath = config_path('permissions.php');
-        if (file_exists($configPath)) {
-            unlink($configPath);
-            $this->info('⚠️ Removed config/permissions.php');
+        if ($this->confirmToProceed() === false) {
+            return self::FAILURE;
         }
 
-        // Delete published migrations
-        $migrations = collect(glob(database_path('migrations/*create_permissions_table*.php')))
-                ->sortDesc(); // Sort by newest first
+        $this->removeConfig();
+        $this->removeMigrations();
+        $this->removeTranslations();
+
+        PermissionCache::flush();
+
+        $this->info('✅  Permission package uninstalled successfully.');
+
+        return self::SUCCESS;
+    }
+
+    private function removeConfig(): void
+    {
+        $configPath = config_path('permissions.php');
+
+        if (File::exists($configPath)) {
+            File::delete($configPath);
+            $this->info('⚠️ Removed config/permissions.php');
+        }
+    }
+
+    private function removeMigrations(): void
+    {
+        // Sort by newest first
+        $migrations = collect(File::glob(database_path('migrations/*create_permissions_table*.php')))->sortDesc();
 
         foreach ($migrations as $migrationPath) {
-            $migrationInstance = require $migrationPath;
+            $migration = require $migrationPath;
 
-            if (method_exists($migrationInstance, 'down')) {
+            if (method_exists($migration, 'down')) {
                 try {
-                    $migrationInstance->down();
-                    $this->info("🔧 Rolled back anonymous migration in: {$migrationPath}");
+                    $migration->down();
+                    $this->info("🔧 Rolled back migration in: {$migrationPath}");
                 } catch (\Throwable $e) {
-                    $this->error("❌ Failed to rollback anonymous migration: {$e->getMessage()}");
+                    $this->error("❌ Failed to rollback migration: {$e->getMessage()}");
                 }
             }
 
-            // Delete the file after rollback
-            unlink($migrationPath);
+            // Forget the migration, otherwise it is never executed again after a re-install
+            if (Schema::hasTable('migrations')) {
+                DB::table('migrations')
+                        ->where('migration', pathinfo($migrationPath, PATHINFO_FILENAME))
+                        ->delete();
+            }
+
+            File::delete($migrationPath);
             $this->info("⚠️ Deleted migration: {$migrationPath}");
         }
-
-        // Delete language files
-        $langPath = resource_path('lang/vendor/permissions');
-        if (is_dir($langPath)) {
-            // delete all query.php files in the directory
-            $files = glob($langPath . '/*/permissions.php');
-            foreach ($files as $file) {
-                unlink($file);
-                $this->info('⚠️ Removed ' . $file);
-            }
-            // delete the directory
-            rmdir($langPath);
-        }
-
-        $this->info('✅  Permission package uninstalled successfully.');
     }
 
+    private function removeTranslations(): void
+    {
+        $langPath = resource_path('lang/vendor/permissions');
+
+        if (File::isDirectory($langPath)) {
+            File::deleteDirectory($langPath);
+            $this->info('⚠️ Removed ' . $langPath);
+        }
+    }
 }

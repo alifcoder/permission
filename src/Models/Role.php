@@ -7,15 +7,28 @@
 
 namespace Alif\Permissions\Models;
 
+use Alif\Permissions\Models\Concerns\HasUuidPrimaryKey;
+use Alif\Permissions\Models\Concerns\ResolvesKeys;
+use Alif\Permissions\Support\PermissionCache;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Ramsey\Uuid\Uuid;
+use Illuminate\Support\Collection;
 
 class Role extends Model
 {
     use SoftDeletes;
+    use HasUuidPrimaryKey;
+    use ResolvesKeys;
+
+    public const SUPER_ADMIN = 'SUPER ADMIN';
+
+    /**
+     * Pivot table between roles and permissions.
+     */
+    public const PERMISSION_PIVOT = 'role_permission';
 
     protected $guarded = false;
 
@@ -25,72 +38,113 @@ class Role extends Model
             'updated_at' => 'immutable_datetime:Y-m-d H:i:s',
     ];
 
-    const string SUPER_ADMIN = 'SUPER ADMIN';
-
-    protected static function boot(): void
+    protected static function booted(): void
     {
-        parent::boot();
+        // A role change (name, s_code, deletion, restore) may affect any user,
+        // so the whole permission cache of the package is dropped.
+        $flush = static fn() => PermissionCache::flush();
 
-        static::creating(function (self $model) {
-            if (empty($model->{$model->getKeyName()}) && config('permissions.is_model_uuid', true) === true) {
-                $model->{$model->getKeyName()} = Uuid::uuid4()->toString();
-            }
-        });
-
-        // clear cache when user is deleted and updated
-        static::deleted(function (self $model) {
-            if (permissionCacheable() === true) {
-                foreach ($this->usersId() as $user) {
-                    \Cache::tags(['user_role:' . $user->id])->flush();
-                }
-            }
-        });
-        static::updated(function (self $model) {
-            if (permissionCacheable() === true) {
-                foreach ($this->usersId() as $user) {
-                    \Cache::tags(['user_role:' . $user->id])->flush();
-                }
-            }
-        });
+        static::updated($flush);
+        static::deleted($flush);
+        static::restored($flush);
     }
 
     /**
-     * Get the value indicating whether the IDs are incrementing.
+     * Columns used to look up a role by a human readable value.
      *
-     * @return bool
+     * @return array<string, bool>
      */
-    public function getIncrementing(): bool
+    protected static function searchableColumns(): array
     {
-        return config('permissions.is_model_uuid', true) === false;
+        return ['name' => true, 's_code' => false];
     }
 
     /**
-     * Get the auto-incrementing key type.
-     *
-     * @return string
+     * Role names are always stored upper-cased.
      */
-    public function getKeyType(): string
-    {
-        return config('permissions.is_model_uuid', true) === false ? 'int' : 'string';
-    }
-
     public function name(): Attribute
     {
         return Attribute::make(
-                set: fn($value) => mb_strtoupper($value),
+                set: fn($value) => $value === null ? null : mb_strtoupper($value),
         );
     }
 
+    /**
+     * Get all permissions of the role.
+     */
     public function permissions(): BelongsToMany
     {
-        return $this->belongsToMany(config('permissions.models.permission'), 'role_permission', 'role_id', 'permission_id');
+        return $this->belongsToMany(config('permissions.models.permission'), self::PERMISSION_PIVOT, 'role_id', 'permission_id');
     }
 
-    private function usersId(): array
+    /**
+     * Replace the permissions of the role.
+     * You can give to parameter:
+     *  - Collection|EloquentCollection|array -> Permission models, ids or names
+     *  - Permission -> Permission model
+     *  - string -> Permission name or id
+     *  - int -> Permission id
+     */
+    public function syncPermissions(Collection|EloquentCollection|array|Permission|string|int $value): void
     {
-        return \DB::table('user_role')
-                ->where('role_id', $this->id)
-                ->pluck('user_id')
-                ->toArray() ?? [];
+        $this->permissions()->sync($this->resolvePermissionKeys($value));
+
+        $this->forgetPermissionCache();
+    }
+
+    /**
+     * Give the given permissions to the role, keeping the existing ones.
+     */
+    public function givePermissionTo(Collection|EloquentCollection|array|Permission|string|int $value): void
+    {
+        $keys = $this->resolvePermissionKeys($value);
+
+        if ($keys === []) {
+            return;
+        }
+
+        // syncWithoutDetaching() is used instead of attach() to stay
+        // idempotent and to avoid duplicate key violations on the pivot.
+        $this->permissions()->syncWithoutDetaching($keys);
+
+        $this->forgetPermissionCache();
+    }
+
+    /**
+     * Revoke the given permissions from the role.
+     */
+    public function revokePermissionTo(Collection|EloquentCollection|array|Permission|string|int $value): void
+    {
+        $keys = $this->resolvePermissionKeys($value);
+
+        if ($keys === []) {
+            return;
+        }
+
+        $this->permissions()->detach($keys);
+
+        $this->forgetPermissionCache();
+    }
+
+    /**
+     * Drop every cached role/permission set, because the permissions of this
+     * role are embedded in the cache of every user owning it.
+     */
+    public function forgetPermissionCache(): void
+    {
+        $this->unsetRelation('permissions');
+
+        PermissionCache::flush();
+    }
+
+    /**
+     * @return array<int, int|string>
+     */
+    private function resolvePermissionKeys(mixed $value): array
+    {
+        /** @var class-string<Permission> $permission */
+        $permission = config('permissions.models.permission');
+
+        return $permission::resolveKeys($value);
     }
 }

@@ -5,8 +5,12 @@
  * Time: 10:14 AM
  */
 
+use Alif\Permissions\Support\PermissionCache;
 
 if (!function_exists('checkToUUID')) {
+    /**
+     * Check whether the given value is a valid UUID.
+     */
     function checkToUUID(mixed $value): bool
     {
         if (!is_string($value)) {
@@ -18,24 +22,23 @@ if (!function_exists('checkToUUID')) {
 }
 
 if (!function_exists('isSuperAdmin')) {
+    /**
+     * Check whether the authenticated user is a super admin.
+     */
     function isSuperAdmin(): bool
     {
-        return auth()->user()?->hasAllRoles(\Alif\Permissions\Models\Role::SUPER_ADMIN) ?? false;
+        $user = auth()->user();
+
+        return $user !== null && method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin();
     }
 }
 
 if (!function_exists('permissionCacheable')) {
+    /**
+     * Check whether the package is allowed to cache on the configured store.
+     */
     function permissionCacheable(): bool
     {
-        if (config('permissions.cacheable') === false) {
-            return false;
-        }
-
-        $allow = [
-                'redis',
-                'memcached',
-        ];
-
-        return in_array(config('cache.default'), $allow);
+        return PermissionCache::enabled();
     }
 }

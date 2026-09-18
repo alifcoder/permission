@@ -10,32 +10,36 @@ namespace Alif\Permissions\Middleware;
 use Alif\Permissions\Exceptions\PermissionException;
 use Closure;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class PermissionMiddleware
 {
     /**
      * @throws PermissionException
      */
-    public function handle(Request $request, Closure $next, string $permissions, ?string $guard = null)
+    public function handle(Request $request, Closure $next, string $permissions, ?string $guard = null): Response
     {
-        // auth guard
-        $authGuard = app('auth')->guard($guard);
+        $user = app('auth')->guard($guard)->user();
 
         // check user is guest then throw exception
-        if ($authGuard->guest()) {
+        if ($user === null) {
             throw PermissionException::notLoggedIn();
         }
 
+        if (method_exists($user, 'hasAllPermissions') === false) {
+            throw PermissionException::permissions();
+        }
+
         // check user is super admin then allow all permissions
-        if ($authGuard->user()->isSuperAdmin()) {
+        if ($user->isSuperAdmin()) {
             return $next($request);
         }
 
         // prepare permissions for checking
-        $permissions = explode('|', $permissions);
+        $permissions = array_filter(explode('|', $permissions), static fn(string $permission) => trim($permission) !== '');
 
         // check user has all permissions then allow
-        if ($authGuard->user()->hasAllPermissions($permissions) === true) {
+        if ($permissions !== [] && $user->hasAllPermissions($permissions) === true) {
             return $next($request);
         }
 
