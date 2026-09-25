@@ -93,6 +93,14 @@ class PermissionCache
     }
 
     /**
+     * Remove one entry, for example when a previous package version cached a model object.
+     */
+    public static function forget(Model $model, string $key): void
+    {
+        static::store()->tags([static::TAG, static::userTag($model)])->forget($key);
+    }
+
+    /**
      * Drop every cached entry of a single user.
      */
     public static function flushUser(Model $model): void

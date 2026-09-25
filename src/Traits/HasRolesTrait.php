@@ -68,9 +68,7 @@ trait HasRolesTrait
             return $this->alifPermissionMemo['roles'];
         }
 
-        $roles = PermissionCache::enabled()
-                ? PermissionCache::remember($this, PermissionCache::key($this, 'roles'), fn() => $this->fetchRoles())
-                : $this->fetchRoles();
+        $roles = PermissionCache::enabled() ? $this->cachedRoles() : $this->fetchRoles();
 
         return $this->alifPermissionMemo['roles'] = $roles;
     }
@@ -301,6 +299,92 @@ trait HasRolesTrait
     private function fetchRoles(): EloquentCollection
     {
         return $this->roles()->with('permissions')->get();
+    }
+
+    /**
+     * Cache only arrays of raw attributes. Serialized Eloquent objects can become
+     * __PHP_Incomplete_Class when a cache entry outlives its model class.
+     */
+    private function cachedRoles(): EloquentCollection
+    {
+        $key = PermissionCache::key($this, 'roles');
+        $roles = null;
+        $remember = function () use (&$roles): array {
+            $roles = $this->fetchRoles();
+
+            return $this->rolesToCache($roles);
+        };
+        $payload = PermissionCache::remember($this, $key, $remember);
+
+        // Replace entries written by older versions, which stored the collection itself.
+        if (!is_array($payload) || ($payload['version'] ?? null) !== 1 || !is_array($payload['roles'] ?? null)) {
+            PermissionCache::forget($this, $key);
+            $payload = PermissionCache::remember($this, $key, $remember);
+        }
+
+        return $roles ?? $this->rolesFromCache($payload['roles']);
+    }
+
+    private function rolesToCache(EloquentCollection $roles): array
+    {
+        $rolePivot = $this->roles()->getPivotAccessor();
+
+        return [
+                'version' => 1,
+                'roles' => $roles->map(function (Model $role) use ($rolePivot) {
+                    $permissionPivot = $role->permissions()->getPivotAccessor();
+
+                    return [
+                            'attributes' => $role->getRawOriginal(),
+                            'connection' => $role->getConnectionName(),
+                            'pivot' => $this->pivotAttributes($role, $rolePivot),
+                            'permissions' => $role->permissions->map(fn(Model $permission) => [
+                                    'attributes' => $permission->getRawOriginal(),
+                                    'connection' => $permission->getConnectionName(),
+                                    'pivot' => $this->pivotAttributes($permission, $permissionPivot),
+                            ])->all(),
+                    ];
+                })->all(),
+        ];
+    }
+
+    private function rolesFromCache(array $cachedRoles): EloquentCollection
+    {
+        $relation = $this->roles();
+        $roleModel = $relation->getRelated();
+        $roles = [];
+
+        foreach ($cachedRoles as $cachedRole) {
+            $role = $roleModel->newFromBuilder($cachedRole['attributes'], $cachedRole['connection']);
+
+            if ($cachedRole['pivot'] !== null) {
+                $role->setRelation($relation->getPivotAccessor(), $relation->newExistingPivot($cachedRole['pivot']));
+            }
+
+            $permissionRelation = $role->permissions();
+            $permissionModel = $permissionRelation->getRelated();
+            $permissions = [];
+
+            foreach ($cachedRole['permissions'] as $cachedPermission) {
+                $permission = $permissionModel->newFromBuilder($cachedPermission['attributes'], $cachedPermission['connection']);
+
+                if ($cachedPermission['pivot'] !== null) {
+                    $permission->setRelation($permissionRelation->getPivotAccessor(), $permissionRelation->newExistingPivot($cachedPermission['pivot']));
+                }
+
+                $permissions[] = $permission;
+            }
+
+            $role->setRelation('permissions', $permissionModel->newCollection($permissions));
+            $roles[] = $role;
+        }
+
+        return $roleModel->newCollection($roles);
+    }
+
+    private function pivotAttributes(Model $model, string $accessor): ?array
+    {
+        return $model->relationLoaded($accessor) ? $model->getRelation($accessor)?->getRawOriginal() : null;
     }
 
     /**
