@@ -7,13 +7,13 @@
 
 use Alif\Permissions\Support\PermissionCache;
 
-if (!function_exists('checkToUUID')) {
+if (! function_exists('checkToUUID')) {
     /**
      * Check whether the given value is a valid UUID.
      */
     function checkToUUID(mixed $value): bool
     {
-        if (!is_string($value)) {
+        if (! is_string($value)) {
             return false;
         }
 
@@ -21,7 +21,7 @@ if (!function_exists('checkToUUID')) {
     }
 }
 
-if (!function_exists('isSuperAdmin')) {
+if (! function_exists('isSuperAdmin')) {
     /**
      * Check whether the authenticated user is a super admin.
      */
@@ -33,7 +33,7 @@ if (!function_exists('isSuperAdmin')) {
     }
 }
 
-if (!function_exists('permissionCacheable')) {
+if (! function_exists('permissionCacheable')) {
     /**
      * Check whether the package is allowed to cache on the configured store.
      */

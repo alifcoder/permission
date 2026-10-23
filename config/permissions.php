@@ -1,5 +1,8 @@
 <?php
 
+use Alif\Permissions\Models\Permission;
+use Alif\Permissions\Models\Role;
+
 /**
  * Created by Shukhratjon Yuldashev on 2025-05-16
  * Contact: https://t.me/alif_coder
@@ -17,7 +20,7 @@ return [
              * The model you want to use as a Role model needs to implement the
              * `\Alif\Permissions\Models\Role` contract.
              */
-            'role'       => \Alif\Permissions\Models\Role::class,
+            'role'       => Role::class,
 
             /**
              * When using the "HasRolesTrait" trait from this package, we need to know which
@@ -27,9 +30,8 @@ return [
              * The model you want to use as a Permission model needs to implement the
              * `\Alif\Permissions\Models\Permission` contract.
              */
-            'permission' => \Alif\Permissions\Models\Permission::class,
+            'permission' => Permission::class,
         ],
-
 
         /**
          * Cache the roles and permissions of every user.

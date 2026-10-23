@@ -8,8 +8,11 @@
     "illuminate/support": "^11.0 || ^12.0 || ^13.0"
   },
   "require-dev": {
+    "larastan/larastan": "^3.13",
     "laravel/framework": "^v12.14.1",
-    "orchestra/testbench": "^10.0"
+    "laravel/pint": "^1.32",
+    "orchestra/testbench": "^10.0",
+    "phpstan/phpstan": "^2.3"
   },
   "autoload": {
     "files": [
@@ -41,7 +44,10 @@
     "sort-packages": true
   },
   "scripts": {
-    "test": "vendor/bin/phpunit"
+    "test": "vendor/bin/phpunit",
+    "pint": "pint",
+    "pint:check": "pint --test",
+    "phpstan": "phpstan analyse --memory-limit=1G"
   },
   "minimum-stability": "stable",
   "prefer-stable": true

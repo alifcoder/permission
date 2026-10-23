@@ -1,0 +1,18 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 5
+
+    paths:
+        - src
+        - config
+        - database
+
+    treatPhpDocTypesAsCertain: false
+
+    ignoreErrors:
+        # The trait is a library trait: it has no user in src/, its users live in the application.
+        -
+            identifier: trait.unused
+            path: src/Traits/HasRolesTrait.php
