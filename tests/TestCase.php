@@ -7,6 +7,7 @@ use Alif\Permissions\Models\Role;
 use Alif\Permissions\PermissionServiceProvider;
 use Alif\Permissions\Tests\Fixtures\User;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Orchestra\Testbench\TestCase as Orchestra;
@@ -18,6 +19,14 @@ abstract class TestCase extends Orchestra
      */
     protected bool $usesUuid = true;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // a shared store (redis) keeps the entries of the previous test, integer keys would collide
+        Cache::flush();
+    }
+
     protected function getPackageProviders($app): array
     {
         return [PermissionServiceProvider::class];
@@ -26,7 +35,8 @@ abstract class TestCase extends Orchestra
     protected function defineEnvironment($app): void
     {
         $app['config']->set('database.default', 'testing');
-        $app['config']->set('cache.default', 'array');
+        // PERMISSIONS_TEST_CACHE=redis runs the suite against a real Redis server
+        $app['config']->set('cache.default', env('PERMISSIONS_TEST_CACHE') ?: 'array');
         $app['config']->set('auth.providers.users.model', User::class);
         $app['config']->set('permissions.is_model_uuid', $this->usesUuid);
         $app['config']->set('permissions.cacheable', true);

@@ -12,6 +12,7 @@ use Alif\Permissions\Support\PermissionCache;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 
@@ -69,6 +70,9 @@ trait HasRolesTrait
         }
 
         $roles = PermissionCache::enabled() ? $this->cachedRoles() : $this->fetchRoles();
+
+        // soft deleted roles are cached too, so that their restore can invalidate the cache
+        $roles = $roles->reject(fn(Model $role) => $this->isTrashed($role))->values();
 
         return $this->alifPermissionMemo['roles'] = $roles;
     }
@@ -194,8 +198,10 @@ trait HasRolesTrait
             return false;
         }
 
+        $lookup = $this->roleLookup();
+
         foreach ($needles as $needle) {
-            if ($this->matchesRole($needle) === false) {
+            if ($this->roleMatches($lookup, $needle) === false) {
                 return false;
             }
         }
@@ -215,8 +221,10 @@ trait HasRolesTrait
      */
     public function hasAnyRole(Collection|EloquentCollection|array|Role|string|int $value): bool
     {
+        $lookup = $this->roleLookup();
+
         foreach ($this->roleNeedles($value) as $needle) {
-            if ($this->matchesRole($needle) === true) {
+            if ($this->roleMatches($lookup, $needle) === true) {
                 return true;
             }
         }
@@ -238,10 +246,11 @@ trait HasRolesTrait
             return false;
         }
 
-        $permissions = $this->permissionNames();
+        // a hash lookup per name instead of scanning the whole list
+        $permissions = array_flip($this->permissionNames());
 
         foreach ($permissionNames as $name) {
-            if (in_array($name, $permissions, true) === false) {
+            if (isset($permissions[$name]) === false) {
                 return false;
             }
         }
@@ -263,7 +272,15 @@ trait HasRolesTrait
             return false;
         }
 
-        return array_intersect($permissionNames, $this->permissionNames()) !== [];
+        $permissions = array_flip($this->permissionNames());
+
+        foreach ($permissionNames as $name) {
+            if (isset($permissions[$name])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -290,39 +307,55 @@ trait HasRolesTrait
         }
     }
 
-
     // helper functions
 
     /**
-     * Read the roles of the user from the database.
+     * Read the roles of the user from the database, soft deleted ones included.
      */
     private function fetchRoles(): EloquentCollection
     {
-        return $this->roles()->with('permissions')->get();
+        $relation = $this->roles();
+
+        if (in_array(SoftDeletes::class, class_uses_recursive($relation->getRelated()), true)) {
+            $relation->withTrashed();
+        }
+
+        return $relation->with('permissions')->get();
+    }
+
+    private function isTrashed(Model $role): bool
+    {
+        return method_exists($role, 'trashed') && $role->trashed();
     }
 
     /**
      * Cache only arrays of raw attributes. Serialized Eloquent objects can become
      * __PHP_Incomplete_Class when a cache entry outlives its model class.
+     *
+     * An entry is valid as long as the roles and permissions it embeds keep their version.
      */
     private function cachedRoles(): EloquentCollection
     {
-        $key = PermissionCache::key($this, 'roles');
-        $roles = null;
-        $remember = function () use (&$roles): array {
-            $roles = $this->fetchRoles();
+        $key     = PermissionCache::key($this, 'roles');
+        $payload = PermissionCache::get($this, $key);
 
-            return $this->rolesToCache($roles);
-        };
-        $payload = PermissionCache::remember($this, $key, $remember);
-
-        // Replace entries written by older versions, which stored the collection itself.
-        if (!is_array($payload) || ($payload['version'] ?? null) !== 1 || !is_array($payload['roles'] ?? null)) {
-            PermissionCache::forget($this, $key);
-            $payload = PermissionCache::remember($this, $key, $remember);
+        if ($this->isCachedRolesPayload($payload) && PermissionCache::isFresh($payload['versions'])) {
+            return $this->rolesFromCache($payload['roles']);
         }
 
-        return $roles ?? $this->rolesFromCache($payload['roles']);
+        $roles = $this->fetchRoles();
+
+        PermissionCache::put($this, $key, $this->rolesToCache($roles));
+
+        return $roles;
+    }
+
+    private function isCachedRolesPayload(mixed $payload): bool
+    {
+        return is_array($payload)
+                && ($payload['version'] ?? null) === 2
+                && is_array($payload['roles'] ?? null)
+                && is_array($payload['versions'] ?? null);
     }
 
     private function rolesToCache(EloquentCollection $roles): array
@@ -330,29 +363,50 @@ trait HasRolesTrait
         $rolePivot = $this->roles()->getPivotAccessor();
 
         return [
-                'version' => 1,
-                'roles' => $roles->map(function (Model $role) use ($rolePivot) {
+                'version'  => 2,
+                'versions' => PermissionCache::snapshot($this->versionKeys($roles)),
+                'roles'    => $roles->map(function (Model $role) use ($rolePivot) {
                     $permissionPivot = $role->permissions()->getPivotAccessor();
 
                     return [
-                            'attributes' => $role->getRawOriginal(),
-                            'connection' => $role->getConnectionName(),
-                            'pivot' => $this->pivotAttributes($role, $rolePivot),
+                            'attributes'  => $role->getRawOriginal(),
+                            'connection'  => $role->getConnectionName(),
+                            'pivot'       => $this->pivotAttributes($role, $rolePivot),
                             'permissions' => $role->permissions->map(fn(Model $permission) => [
                                     'attributes' => $permission->getRawOriginal(),
                                     'connection' => $permission->getConnectionName(),
-                                    'pivot' => $this->pivotAttributes($permission, $permissionPivot),
+                                    'pivot'      => $this->pivotAttributes($permission, $permissionPivot),
                             ])->all(),
                     ];
                 })->all(),
         ];
     }
 
+    /**
+     * Version keys of every role and permission embedded in the given roles.
+     *
+     * @return array<int, string>
+     */
+    private function versionKeys(EloquentCollection $roles): array
+    {
+        $keys = [PermissionCache::globalVersionKey()];
+
+        foreach ($roles as $role) {
+            $keys[] = PermissionCache::versionKey('role', $role->getKey());
+
+            foreach ($role->permissions as $permission) {
+                $keys[] = PermissionCache::versionKey('permission', $permission->getKey());
+            }
+        }
+
+        return array_values(array_unique($keys));
+    }
+
     private function rolesFromCache(array $cachedRoles): EloquentCollection
     {
-        $relation = $this->roles();
+        $relation  = $this->roles();
         $roleModel = $relation->getRelated();
-        $roles = [];
+        $roles     = [];
 
         foreach ($cachedRoles as $cachedRole) {
             $role = $roleModel->newFromBuilder($cachedRole['attributes'], $cachedRole['connection']);
@@ -362,8 +416,8 @@ trait HasRolesTrait
             }
 
             $permissionRelation = $role->permissions();
-            $permissionModel = $permissionRelation->getRelated();
-            $permissions = [];
+            $permissionModel    = $permissionRelation->getRelated();
+            $permissions        = [];
 
             foreach ($cachedRole['permissions'] as $cachedPermission) {
                 $permission = $permissionModel->newFromBuilder($cachedPermission['attributes'], $cachedPermission['connection']);
@@ -425,17 +479,39 @@ trait HasRolesTrait
     }
 
     /**
-     * Check the given id, name or s_code against the roles of the user in memory.
+     * Index the roles of the user in memory: exact keys and s_codes, and upper-cased names.
+     *
+     * @return array{0: array<string, true>, 1: array<string, true>}
      */
-    private function matchesRole(int|string $needle): bool
+    private function roleLookup(): array
     {
-        $needle = (string)$needle;
-        $upper  = mb_strtoupper($needle);
+        $exact = [];
+        $names = [];
 
-        return $this->roles->contains(function (Model $role) use ($needle, $upper) {
-            return (string)$role->getKey() === $needle
-                    || (string)$role->getAttribute('s_code') === $needle
-                    || mb_strtoupper((string)$role->getAttribute('name')) === $upper;
-        });
+        foreach ($this->roles as $role) {
+            $exact[(string)$role->getKey()] = true;
+
+            if ($role->getAttribute('s_code') !== null) {
+                $exact[(string)$role->getAttribute('s_code')] = true;
+            }
+
+            if ((string)$role->getAttribute('name') !== '') {
+                $names[mb_strtoupper((string)$role->getAttribute('name'))] = true;
+            }
+        }
+
+        return [$exact, $names];
+    }
+
+    /**
+     * Check the given id, name or s_code against the indexed roles of the user.
+     *
+     * @param  array{0: array<string, true>, 1: array<string, true>}  $lookup
+     */
+    private function roleMatches(array $lookup, int|string $needle): bool
+    {
+        [$exact, $names] = $lookup;
+
+        return isset($exact[(string)$needle]) || isset($names[mb_strtoupper((string)$needle)]);
     }
 }
