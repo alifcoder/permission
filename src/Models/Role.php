@@ -40,14 +40,13 @@ class Role extends Model
 
     protected static function booted(): void
     {
-        // A role change (name, s_code, deletion, restore) only affects the cached
-        // sets of the users owning this role.
-        $bump = static fn(self $role) => PermissionCache::bump('role', $role->getKey());
+        // A role change (name, s_code, deletion, restore) may affect any user,
+        // so the whole permission cache of the package is dropped.
+        $flush = static fn() => PermissionCache::flush();
 
-        static::updated($bump);
-        static::deleted($bump);
-        static::restored($bump);
-        static::forceDeleted($bump);
+        static::updated($flush);
+        static::deleted($flush);
+        static::restored($flush);
     }
 
     /**
@@ -128,14 +127,14 @@ class Role extends Model
     }
 
     /**
-     * Invalidate the cached role/permission sets of the users owning this role,
-     * because the permissions of this role are embedded in them.
+     * Drop every cached role/permission set, because the permissions of this
+     * role are embedded in the cache of every user owning it.
      */
     public function forgetPermissionCache(): void
     {
         $this->unsetRelation('permissions');
 
-        PermissionCache::bump('role', $this->getKey());
+        PermissionCache::flush();
     }
 
     /**

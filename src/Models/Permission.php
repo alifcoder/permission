@@ -17,21 +17,17 @@ class Permission extends Model
     use HasUuidPrimaryKey;
     use ResolvesKeys;
 
-    public $timestamps    = false;
+    public    $timestamps = false;
     protected $guarded    = false;
 
     protected static function booted(): void
     {
-        // Permission names are cached inside the role set of every user having it,
-        // so renaming or deleting one only invalidates those cached sets.
-        $bump = static fn(self $permission) => PermissionCache::bump('permission', $permission->getKey());
+        // Permission names are cached inside the role set of every user,
+        // so renaming or deleting one invalidates the whole package cache.
+        $flush = static fn() => PermissionCache::flush();
 
-        static::updated($bump);
-        static::deleted($bump);
-
-        // restored and forceDeleted exist only with SoftDeletes, applications may add it
-        static::registerModelEvent('restored', $bump);
-        static::registerModelEvent('forceDeleted', $bump);
+        static::updated($flush);
+        static::deleted($flush);
     }
 
     /**

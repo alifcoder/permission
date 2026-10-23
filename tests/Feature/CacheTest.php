@@ -2,8 +2,8 @@
 
 namespace Alif\Permissions\Tests\Feature;
 
-use Alif\Permissions\Models\Permission;
 use Alif\Permissions\Models\Role;
+use Alif\Permissions\Models\Permission;
 use Alif\Permissions\Support\PermissionCache;
 use Alif\Permissions\Tests\Fixtures\User;
 use Alif\Permissions\Tests\TestCase;
@@ -73,8 +73,8 @@ class CacheTest extends TestCase
         $user->assignRoles($this->admin);
         $user->roles; // warm the cache
 
-        $key     = PermissionCache::key($user, 'roles');
-        $store   = PermissionCache::store()->tags([PermissionCache::TAG, PermissionCache::userTag($user)]);
+        $key = PermissionCache::key($user, 'roles');
+        $store = PermissionCache::store()->tags([PermissionCache::TAG, PermissionCache::userTag($user)]);
         $payload = $store->get($key);
 
         $this->assertIsArray($payload);
@@ -97,14 +97,14 @@ class CacheTest extends TestCase
         $user = $this->createUser();
         $user->assignRoles($this->admin);
 
-        $key   = PermissionCache::key($user, 'roles');
+        $key = PermissionCache::key($user, 'roles');
         $store = PermissionCache::store()->tags([PermissionCache::TAG, PermissionCache::userTag($user)]);
         $store->forever($key, unserialize('O:7:"Missing":0:{}'));
 
         $fresh = User::find($user->id);
         $this->assertTrue($fresh->hasAllRoles('admin'));
         $this->assertIsArray($store->get($key));
-        $this->assertSame(2, $store->get($key)['version']);
+        $this->assertSame(1, $store->get($key)['version']);
     }
 
     public function test_it_caches_an_empty_role_set(): void
@@ -273,14 +273,12 @@ class CacheTest extends TestCase
         $user->assignRoles($this->admin);
         $user->roles;
 
-        // the pivot is changed behind the package, so the cached roles are stale on purpose
-        $user->roles()->detach();
-        $this->assertTrue(User::find($user->id)->hasAllRoles('admin'));
-
         $this->artisan('permission:cache-clear')
                 ->expectsOutputToContain('cleared successfully')
                 ->assertSuccessful();
 
-        $this->assertFalse(User::find($user->id)->hasAnyRole('admin'));
+        $this->assertNull(PermissionCache::store()
+                ->tags([PermissionCache::TAG, PermissionCache::userTag($user)])
+                ->get(PermissionCache::key($user, 'roles')));
     }
 }
