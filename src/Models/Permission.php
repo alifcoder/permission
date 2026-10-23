@@ -17,7 +17,7 @@ class Permission extends Model
     use HasUuidPrimaryKey;
     use ResolvesKeys;
 
-    public    $timestamps = false;
+    public $timestamps    = false;
     protected $guarded    = false;
 
     protected static function booted(): void

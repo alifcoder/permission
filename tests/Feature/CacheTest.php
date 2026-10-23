@@ -2,8 +2,8 @@
 
 namespace Alif\Permissions\Tests\Feature;
 
-use Alif\Permissions\Models\Role;
 use Alif\Permissions\Models\Permission;
+use Alif\Permissions\Models\Role;
 use Alif\Permissions\Support\PermissionCache;
 use Alif\Permissions\Tests\Fixtures\User;
 use Alif\Permissions\Tests\TestCase;
@@ -73,8 +73,8 @@ class CacheTest extends TestCase
         $user->assignRoles($this->admin);
         $user->roles; // warm the cache
 
-        $key = PermissionCache::key($user, 'roles');
-        $store = PermissionCache::store()->tags([PermissionCache::TAG, PermissionCache::userTag($user)]);
+        $key     = PermissionCache::key($user, 'roles');
+        $store   = PermissionCache::store()->tags([PermissionCache::TAG, PermissionCache::userTag($user)]);
         $payload = $store->get($key);
 
         $this->assertIsArray($payload);
@@ -97,7 +97,7 @@ class CacheTest extends TestCase
         $user = $this->createUser();
         $user->assignRoles($this->admin);
 
-        $key = PermissionCache::key($user, 'roles');
+        $key   = PermissionCache::key($user, 'roles');
         $store = PermissionCache::store()->tags([PermissionCache::TAG, PermissionCache::userTag($user)]);
         $store->forever($key, unserialize('O:7:"Missing":0:{}'));
 
