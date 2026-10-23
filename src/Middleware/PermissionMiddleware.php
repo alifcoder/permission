@@ -31,7 +31,7 @@ class PermissionMiddleware
         }
 
         // check user is super admin then allow all permissions
-        if ($user->isSuperAdmin()) {
+        if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) {
             return $next($request);
         }
 

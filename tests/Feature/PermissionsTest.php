@@ -3,7 +3,9 @@
 namespace Alif\Permissions\Tests\Feature;
 
 use Alif\Permissions\Models\Permission;
+use Alif\Permissions\Models\Role;
 use Alif\Permissions\Tests\TestCase;
+use Illuminate\Support\Facades\Gate;
 
 class PermissionsTest extends TestCase
 {
@@ -98,17 +100,17 @@ class PermissionsTest extends TestCase
 
     public function test_the_super_admin_bypasses_the_gate(): void
     {
-        $this->createRole(\Alif\Permissions\Models\Role::SUPER_ADMIN, 'super');
+        $this->createRole(Role::SUPER_ADMIN, 'super');
 
         $user = $this->createUser();
         $this->assertFalse($user->can('anything'));
 
-        $user->assignRoles(\Alif\Permissions\Models\Role::SUPER_ADMIN);
+        $user->assignRoles(Role::SUPER_ADMIN);
         $this->assertTrue($user->can('anything'));
     }
 
     public function test_the_gate_survives_guest_checks(): void
     {
-        $this->assertFalse(\Illuminate\Support\Facades\Gate::forUser(null)->allows('anything'));
+        $this->assertFalse(Gate::forUser(null)->allows('anything'));
     }
 }

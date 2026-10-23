@@ -5,12 +5,13 @@ namespace Alif\Permissions\Tests\Feature;
 use Alif\Permissions\Models\Role;
 use Alif\Permissions\Tests\Fixtures\PlainUser;
 use Alif\Permissions\Tests\TestCase;
+use Ramsey\Uuid\Uuid;
 
 class HelpersTest extends TestCase
 {
     public function test_check_to_uuid(): void
     {
-        $this->assertTrue(checkToUUID(\Ramsey\Uuid\Uuid::uuid4()->toString()));
+        $this->assertTrue(checkToUUID(Uuid::uuid4()->toString()));
         $this->assertFalse(checkToUUID('not-a-uuid'));
         $this->assertFalse(checkToUUID(''));
         $this->assertFalse(checkToUUID(42));

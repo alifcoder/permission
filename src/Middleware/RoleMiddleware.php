@@ -31,7 +31,7 @@ class RoleMiddleware
         }
 
         // check user is super admin then allow all roles
-        if ($user->isSuperAdmin()) {
+        if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) {
             return $next($request);
         }
 

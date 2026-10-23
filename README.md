@@ -13,7 +13,7 @@ A simple, flexible role and permission management system for Laravel application
 - Every role and permission check is answered from memory — one query per user, per request
 - Automatic cache invalidation on every role/permission change
 - Dynamically configurable role and permission models (UUID or auto-increment keys)
-- Language file localization (EN, customizable)
+- Localization: English, Russian and Uzbek messages, customizable per locale
 - Clean service provider with publishable config and migrations
 - Works with modular Laravel apps (like `nwidart/laravel-modules`)
 
@@ -160,17 +160,24 @@ The cache is dropped automatically when:
 |---------------------------------------------------------------|--------------------------|
 | `assignRoles()`, `syncRoles()`, `removeRole()`                 | the cache of that user   |
 | the user is deleted                                            | the cache of that user   |
-| `givePermissionTo()`, `syncPermissions()`, `revokePermissionTo()` | the whole package cache  |
-| a role is updated, deleted or restored                         | the whole package cache  |
-| a permission is updated or deleted                             | the whole package cache  |
+| `givePermissionTo()`, `syncPermissions()`, `revokePermissionTo()` | the cache of the users owning that role |
+| a role is updated, deleted, restored or force deleted          | the cache of the users owning that role |
+| a permission is updated or deleted                             | the cache of the users owning that permission |
 
 ---
 
 ## 🌐 Localization
 
-The package includes English (`en`) translations. To override or translate:
+The package ships with English (`en`), Russian (`ru`) and Uzbek (`uz`) translations. All messages, exceptions and console
+output use them, the active one follows the application locale (`app.locale`), and missing keys fall back to English.
 
-Then add `resources/lang/vendor/permissions/{locale}/permissions.php`.
+To override or add a language, publish the files and edit them:
+
+```bash
+php artisan vendor:publish --tag=permissions
+```
+
+They are copied to `resources/lang/vendor/permissions/{locale}/permissions.php`.
 
 ---
 
@@ -254,7 +261,23 @@ composer test
 ```
 
 The suite runs against `orchestra/testbench` with an in-memory SQLite database, and covers both UUID and
-auto-incrementing primary keys, the cache invalidation matrix, the middlewares and the console commands.
+auto-incrementing primary keys, the cache invalidation matrix, the middlewares, the console commands and the
+translations.
+
+To run the cache tests against a real Redis server (the cache is flushed before every test, use a dedicated
+Redis database):
+
+```bash
+PERMISSIONS_TEST_CACHE=redis composer test
+```
+
+### Code quality
+
+```bash
+composer pint          # fix the code style (Laravel Pint, config in pint.json)
+composer pint:check    # check the code style without changing files
+composer phpstan       # static analysis (PHPStan level 5 with Larastan, config in phpstan.neon)
+```
 
 ---
 

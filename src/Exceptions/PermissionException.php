@@ -15,17 +15,17 @@ class PermissionException extends Exception
 {
     public static function roles(): self
     {
-        return new static(message: __('permissions::permissions.you_dont_have_role'), code: Response::HTTP_FORBIDDEN);
+        return new self(message: __('permissions::permissions.you_dont_have_role'), code: Response::HTTP_FORBIDDEN);
     }
 
     public static function permissions(): self
     {
-        return new static(message: __('permissions::permissions.you_dont_have_permission'), code: Response::HTTP_FORBIDDEN);
+        return new self(message: __('permissions::permissions.you_dont_have_permission'), code: Response::HTTP_FORBIDDEN);
     }
 
     public static function notLoggedIn(): self
     {
-        return new static(message: __('permissions::permissions.not_logged_in'), code: Response::HTTP_UNAUTHORIZED);
+        return new self(message: __('permissions::permissions.not_logged_in'), code: Response::HTTP_UNAUTHORIZED);
     }
 
     /**

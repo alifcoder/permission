@@ -39,7 +39,7 @@ class PermissionCache
      */
     public static function generation(): int
     {
-        return static::$generation;
+        return self::$generation;
     }
 
     /**
@@ -59,7 +59,8 @@ class PermissionCache
      */
     public static function store(): Repository
     {
-        return Cache::store(config('permissions.cache_store'));
+        // an empty value (PERMISSION_CACHE_STORE=) means the default store, not a store named ""
+        return Cache::store(config('permissions.cache_store') ?: null);
     }
 
     /**
@@ -105,7 +106,7 @@ class PermissionCache
      */
     public static function flushUser(Model $model): void
     {
-        static::$generation++;
+        self::$generation++;
 
         if (static::enabled() === false || $model->getKey() === null) {
             return;
@@ -122,7 +123,7 @@ class PermissionCache
      */
     public static function flush(): void
     {
-        static::$generation++;
+        self::$generation++;
 
         if (static::enabled() === false) {
             return;

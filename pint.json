@@ -1,0 +1,23 @@
+{
+    "preset": "laravel",
+    "rules": {
+        "array_indentation": false,
+        "binary_operator_spaces": {
+            "default": "single_space",
+            "operators": {
+                "=>": "align_single_space",
+                "=": "align_single_space"
+            }
+        },
+        "blank_line_after_opening_tag": false,
+        "cast_spaces": false,
+        "class_attributes_separation": false,
+        "concat_space": {
+            "spacing": "one"
+        },
+        "function_declaration": false,
+        "method_chaining_indentation": false,
+        "ordered_traits": false,
+        "statement_indentation": false
+    }
+}

@@ -14,19 +14,24 @@ class ClearPermissionCacheCommand extends Command
 {
     protected $signature = 'permission:cache-clear';
 
-    protected $description = 'Clear the permission caches';
+    public function __construct()
+    {
+        $this->description = __('permissions::permissions.commands.cache_clear.description');
+
+        parent::__construct();
+    }
 
     public function handle(): int
     {
         if (PermissionCache::enabled() === false) {
-            $this->warn('⚠️  Permission cache is disabled or the cache store does not support tags.');
+            $this->warn('⚠️  ' . __('permissions::permissions.commands.cache_clear.disabled'));
 
             return self::SUCCESS;
         }
 
         PermissionCache::flush();
 
-        $this->info('✅  Permission caches are cleared successfully.');
+        $this->info('✅  ' . __('permissions::permissions.commands.cache_clear.cleared'));
 
         return self::SUCCESS;
     }
