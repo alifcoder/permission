@@ -2,6 +2,7 @@
 
 namespace Alif\Permissions\Tests\Feature;
 
+use Alif\Permissions\Models\Permission;
 use Alif\Permissions\Support\PermissionCache;
 use Alif\Permissions\Tests\Fixtures\User;
 use Alif\Permissions\Tests\TestCase;
@@ -112,5 +113,35 @@ class ScopedInvalidationTest extends TestCase
         $admin->givePermissionTo($this->createPermission('products.update'));
 
         $this->assertTrue(User::find($john->id)->hasAnyPermission('products.update'));
+    }
+
+    public function test_an_empty_cache_store_setting_uses_the_default_store(): void
+    {
+        // PERMISSION_CACHE_STORE= is an empty string in the environment files
+        $this->app['config']->set('permissions.cache_store', '');
+
+        $admin = $this->createRole('Admin', 'admin');
+        $john  = $this->createUser('john');
+        $john->assignRoles($admin);
+
+        $this->assertTrue(PermissionCache::enabled());
+        $this->assertTrue(User::find($john->id)->hasAllRoles('admin'));
+    }
+
+    public function test_restoring_and_force_deleting_a_permission_changes_its_version(): void
+    {
+        $permission = $this->createPermission('products.read');
+        $key        = PermissionCache::versionKey('permission', $permission->getKey());
+        $dispatcher = Permission::getEventDispatcher();
+
+        $before = PermissionCache::snapshot([$key])[$key];
+        $dispatcher->dispatch('eloquent.restored: ' . Permission::class, $permission);
+        $afterRestore = PermissionCache::snapshot([$key])[$key];
+
+        $dispatcher->dispatch('eloquent.forceDeleted: ' . Permission::class, $permission);
+        $afterForceDelete = PermissionCache::snapshot([$key])[$key];
+
+        $this->assertNotSame($before, $afterRestore);
+        $this->assertNotSame($afterRestore, $afterForceDelete);
     }
 }

@@ -162,7 +162,7 @@ The cache is dropped automatically when:
 | the user is deleted                                            | the cache of that user   |
 | `givePermissionTo()`, `syncPermissions()`, `revokePermissionTo()` | the cache of the users owning that role |
 | a role is updated, deleted, restored or force deleted          | the cache of the users owning that role |
-| a permission is updated or deleted                             | the cache of the users owning that permission |
+| a permission is updated, deleted, restored or force deleted    | the cache of the users owning that permission |
 
 ---
 

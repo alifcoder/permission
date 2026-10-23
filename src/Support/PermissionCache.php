@@ -64,7 +64,8 @@ class PermissionCache
      */
     public static function store(): Repository
     {
-        return Cache::store(config('permissions.cache_store'));
+        // an empty value (PERMISSION_CACHE_STORE=) means the default store, not a store named ""
+        return Cache::store(config('permissions.cache_store') ?: null);
     }
 
     /**

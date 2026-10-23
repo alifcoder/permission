@@ -28,6 +28,10 @@ class Permission extends Model
 
         static::updated($bump);
         static::deleted($bump);
+
+        // restored and forceDeleted exist only with SoftDeletes, applications may add it
+        static::registerModelEvent('restored', $bump);
+        static::registerModelEvent('forceDeleted', $bump);
     }
 
     /**
