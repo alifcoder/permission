@@ -20,7 +20,13 @@ class UninstallPermissionCommand extends Command
 
     protected $signature = 'permission:uninstall {--force : Force the operation to run when in production}';
 
-    protected $description = 'Remove config, migrations, and data related to Permission package';
+    public function __construct()
+    {
+        $this->signature   = 'permission:uninstall {--force : ' . __('permissions::permissions.commands.uninstall.force') . '}';
+        $this->description = __('permissions::permissions.commands.uninstall.description');
+
+        parent::__construct();
+    }
 
     public function handle(): int
     {
@@ -34,7 +40,7 @@ class UninstallPermissionCommand extends Command
 
         PermissionCache::flush();
 
-        $this->info('✅  Permission package uninstalled successfully.');
+        $this->info('✅  ' . __('permissions::permissions.commands.uninstall.uninstalled'));
 
         return self::SUCCESS;
     }
@@ -45,7 +51,7 @@ class UninstallPermissionCommand extends Command
 
         if (File::exists($configPath)) {
             File::delete($configPath);
-            $this->info('⚠️ Removed config/permissions.php');
+            $this->info('⚠️ ' . __('permissions::permissions.commands.uninstall.config_removed'));
         }
     }
 
@@ -60,9 +66,9 @@ class UninstallPermissionCommand extends Command
             if (method_exists($migration, 'down')) {
                 try {
                     $migration->down();
-                    $this->info("🔧 Rolled back migration in: {$migrationPath}");
+                    $this->info('🔧 ' . __('permissions::permissions.commands.uninstall.migration_rolled_back', ['path' => $migrationPath]));
                 } catch (\Throwable $e) {
-                    $this->error("❌ Failed to rollback migration: {$e->getMessage()}");
+                    $this->error('❌ ' . __('permissions::permissions.commands.uninstall.migration_rollback_failed', ['error' => $e->getMessage()]));
                 }
             }
 
@@ -74,7 +80,7 @@ class UninstallPermissionCommand extends Command
             }
 
             File::delete($migrationPath);
-            $this->info("⚠️ Deleted migration: {$migrationPath}");
+            $this->info('⚠️ ' . __('permissions::permissions.commands.uninstall.migration_deleted', ['path' => $migrationPath]));
         }
     }
 
@@ -84,7 +90,7 @@ class UninstallPermissionCommand extends Command
 
         if (File::isDirectory($langPath)) {
             File::deleteDirectory($langPath);
-            $this->info('⚠️ Removed ' . $langPath);
+            $this->info('⚠️ ' . __('permissions::permissions.commands.uninstall.translations_removed', ['path' => $langPath]));
         }
     }
 }

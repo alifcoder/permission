@@ -49,16 +49,16 @@ trait ResolvesKeys
         }
 
         if ($labels !== []) {
-            $keys = array_merge($keys, static::query()
+            $query = static::query()
                     ->where(function (Builder $builder) use ($labels) {
                         foreach (static::searchableColumns() as $column => $upperCased) {
                             $builder->orWhereIn($column, $upperCased
                                     ? array_map(mb_strtoupper(...), $labels)
                                     : $labels);
                         }
-                    })
-                    ->pluck((new static)->getKeyName())
-                    ->all());
+                    });
+
+            $keys = array_merge($keys, $query->pluck($query->getModel()->getKeyName())->all());
         }
 
         return array_values(array_unique($keys, SORT_REGULAR));

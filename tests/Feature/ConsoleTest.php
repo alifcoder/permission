@@ -22,12 +22,16 @@ class ConsoleTest extends TestCase
         $this->assertDirectoryDoesNotExist(resource_path('lang/vendor/permissions'));
     }
 
-    public function test_it_asks_for_a_confirmation_in_production(): void
+    public function test_it_does_not_uninstall_in_production_without_a_confirmation(): void
     {
+        $this->artisan('vendor:publish', ['--tag' => 'permissions'])->assertSuccessful();
+
         $this->app['env'] = 'production';
 
         $this->artisan('permission:uninstall')
                 ->expectsConfirmation('Are you sure you want to run this command?', 'no')
                 ->assertFailed();
+
+        $this->assertFileExists(config_path('permissions.php'));
     }
 }
